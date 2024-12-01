@@ -107,7 +107,7 @@ def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternumme
             work_minutes = 0
             print(f"\033[1;33m{day:02d}.{month:02d}.  0:00     {weekday:<12} {task_entry}\033[0m")
         else:
-            task_entry = ', '.join(random.sample(tasks, random.randint(2, 3)))
+            task_entry = ', '.join(random.sample(tasks, random.randint(1, 5)))
             work_minutes = daily_minutes[workday_idx]
             work_hours = work_minutes // 60
             work_minutes %= 60
