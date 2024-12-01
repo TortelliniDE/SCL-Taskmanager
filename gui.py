@@ -1,5 +1,4 @@
 from tkinter import Tk, Listbox, Button, Label, Scrollbar, MULTIPLE, EXTENDED, END, messagebox
-from datetime import datetime
 import pandas as pd
 
 # GUI-Funktionen
@@ -13,11 +12,13 @@ def load_tasks_from_excel(file_path):
         messagebox.showerror("Fehler", f"Fehler beim Laden der Excel-Datei: {e}")
         return []
 
-def save_tasks_to_excel(tasks, file_path):
+def save_tasks_to_excel(tasks, file_path, root):
     try:
         df = pd.DataFrame({'Task': tasks})
         df.to_excel(file_path, index=False)
-        messagebox.showinfo("Erfolg", f"Tasks erfolgreich in '{file_path}' gespeichert. Fenster schließen!")
+        messagebox.showinfo("Erfolg", f"Tasks erfolgreich in '{file_path}' gespeichert. Fenster schließen!", parent=root)
+        root.quit()  # Schließt das Hauptfenster
+        root.destroy()  # Zerstört das Hauptfenster
     except Exception as e:
         messagebox.showerror("Fehler", f"Fehler beim Speichern der Excel-Datei: {e}")
 
@@ -43,10 +44,10 @@ def remove_selected_input_tasks(input_task_listbox):
     for index in reversed(selected):
         input_task_listbox.delete(index)
 
-def save_input_list(input_task_listbox):
+def save_input_list(input_task_listbox, root):
     tasks = list(input_task_listbox.get(0, END))
     if tasks:
-        save_tasks_to_excel(tasks, f"Tasks_tmp.xlsx")
+        save_tasks_to_excel(tasks, f"Tasks_tmp.xlsx", root)
     else:
         messagebox.showwarning("Warnung", "Keine Tasks in der Eingabeliste zum Speichern vorhanden.")
 
@@ -76,7 +77,7 @@ def setup_gui(task_file):
     input_task_listbox = Listbox(root, selectmode=MULTIPLE, width=40, height=25)
     input_task_listbox.grid(row=1, column=2, padx=10, pady=5)
 
-    Button(root, text="Speichern", command=lambda: save_input_list(input_task_listbox), width=20, bg="green", fg="white",
+    Button(root, text="Speichern", command=lambda: save_input_list(input_task_listbox, root), width=20, bg="green", fg="white",
            activebackground="darkgreen", activeforeground="yellow").grid(row=5, column=2, pady=20)
 
     # Tasks aus der Datei laden und in die Listbox einfügen
