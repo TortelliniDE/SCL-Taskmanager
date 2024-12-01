@@ -1,8 +1,8 @@
 import calendar
 import random
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternummer, wochenarbeitszeit, resturlaub):
+def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternummer, wochenarbeitszeit, resturlaub, random_hours=False):
     # Liste der Wochentage
     weekdays = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
     
@@ -63,7 +63,14 @@ def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternumme
     ]
 
     total_soll_minutes = 9600
-    daily_minutes = [random.randint(360, 540) for _ in range(len(workdays_in_month))]
+    # Wenn random_hours=True, dann zufällige Stunden generieren
+    if random_hours:
+        daily_minutes = [random.randint(360, 540) for _ in range(len(workdays_in_month))]
+    else:
+        # Feste Arbeitszeit von 8 Stunden für jeden Arbeitstag
+        daily_minutes = [480] * len(workdays_in_month)  # 480 Minuten = 8 Stunden
+
+    # Korrektur, um das Soll-Arbeitszeit zu erreichen
     correction = total_soll_minutes - sum(daily_minutes)
     for i in range(len(daily_minutes)):
         daily_minutes[i] += correction // len(daily_minutes)
@@ -71,7 +78,6 @@ def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternumme
 
     print(f"\n\n\033[1;34m\033[1mTätigkeitsliste für {first_name} {last_name} im Monat {german_months[month - 1]} {year}\033[0m\n")
     print(f"Mitarbeiternummer: {mitarbeiternummer}")
-    #TODO: Wochenarbeitszeit aus file holen
     print(f"Wochenarbeitszeit: {wochenarbeitszeit} h/Wo")
     print(f"Resturlaub: {resturlaub} Tage")
     
@@ -114,6 +120,7 @@ def create_task_list(year, month, tasks, first_name, last_name, mitarbeiternumme
             total_minutes_worked += work_hours * 60 + work_minutes
             workday_idx += 1
             print(f"{day:02d}.{month:02d}.  {work_hours}:{work_minutes:02d}     {weekday:<12} {task_entry}")
+    
     total_hours_worked = total_minutes_worked // 60
     total_minutes_worked %= 60
     print(f"\nSollarbeitszeit im Monat {month}/{year}: 160:00 h")

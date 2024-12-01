@@ -7,6 +7,7 @@ from gui import setup_gui, load_tasks_from_excel  # GUI-Funktionen importieren
 # Flag, ob Mitarbeiter aus Datei geladen werden soll
 employer_from_file = False  # Standardwert: False
 
+
 # Hauptskript
 def main():
     if employer_from_file:
@@ -40,7 +41,7 @@ def main():
     # Überprüfen, ob Tasks ausgewählt wurden
     tasks_tmp = "Tasks_tmp.xlsx"
     if not os.path.exists(tasks_tmp):
-        print("Es wurden keine Tasks ausgewählt. Das Programm wird beendet.")
+        print("Es wurden keine Tasks ausgewählt. Das Progamm wird beendet.")
         exit()
 
     # Tasks aus der temporären Datei laden
