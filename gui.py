@@ -1,4 +1,3 @@
-
 from tkinter import Tk, Listbox, Button, Label, Scrollbar, MULTIPLE, EXTENDED, END, messagebox
 from datetime import datetime
 import pandas as pd
@@ -25,6 +24,13 @@ def save_tasks_to_excel(tasks, file_path):
 def update_selected_tasks(task_listbox, input_task_listbox):
     selected = list(task_listbox.curselection())
     for index in selected:
+        task = task_listbox.get(index)
+        if task not in input_task_listbox.get(0, END):
+            input_task_listbox.insert(END, task)
+
+def add_all_tasks(task_listbox, input_task_listbox):
+    # Fügt alle Tasks aus der verfügbaren Liste zur Eingabeliste hinzu
+    for index in range(task_listbox.size()):
         task = task_listbox.get(index)
         if task not in input_task_listbox.get(0, END):
             input_task_listbox.insert(END, task)
@@ -61,16 +67,19 @@ def setup_gui(task_file):
     task_scrollbar.grid(row=1, column=1, sticky="ns")
     task_listbox.config(yscrollcommand=task_scrollbar.set)
 
-    Button(root, text="Ausgewählte hinzufügen →", command=lambda: update_selected_tasks(task_listbox, input_task_listbox)).grid(row=1, column=1, padx=10)
-    Button(root, text="Liste Leeren", command=lambda: clear_input_list(input_task_listbox)).grid(row=2, column=2, pady=5)
-    Button(root, text="Ausgewählte entfernen", command=lambda: remove_selected_input_tasks(input_task_listbox)).grid(row=3, column=2, pady=5)
+    # Buttons
+    Button(root, text="Alle auswählen", command=lambda: add_all_tasks(task_listbox, input_task_listbox)).grid(row=1, column=1, pady=10)
+    Button(root, text="Ausgewählte hinzufügen →", command=lambda: update_selected_tasks(task_listbox, input_task_listbox)).grid(row=2, column=1, pady=10)
+    Button(root, text="Liste Leeren", command=lambda: clear_input_list(input_task_listbox)).grid(row=3, column=2, pady=5)
+    Button(root, text="Ausgewählte entfernen", command=lambda: remove_selected_input_tasks(input_task_listbox)).grid(row=4, column=2, pady=5)
 
     input_task_listbox = Listbox(root, selectmode=MULTIPLE, width=40, height=25)
     input_task_listbox.grid(row=1, column=2, padx=10, pady=5)
 
     Button(root, text="Speichern", command=lambda: save_input_list(input_task_listbox), width=20, bg="green", fg="white",
-           activebackground="darkgreen", activeforeground="yellow").grid(row=4, column=2, pady=20)
+           activebackground="darkgreen", activeforeground="yellow").grid(row=5, column=2, pady=20)
 
+    # Tasks aus der Datei laden und in die Listbox einfügen
     if task_file:
         tasks = load_tasks_from_excel(task_file)
         for task in tasks:
@@ -79,3 +88,4 @@ def setup_gui(task_file):
         messagebox.showerror("Fehler", f"Die Datei '{task_file}' wurde nicht gefunden.")
 
     root.mainloop()
+
