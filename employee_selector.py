@@ -1,4 +1,5 @@
 import pandas as pd
+from logging_util import log_and_print  # Log-Funktion importieren
 
 # Mitarbeiterdaten aus Excel laden
 def load_employees_from_excel(file_path):
@@ -9,9 +10,9 @@ def load_employees_from_excel(file_path):
 
 # Mitarbeiter auswählen
 def choose_employee(employees_df):
-    print("\nVerfügbare Mitarbeiter:")
+    log_and_print("\nVerfügbare Mitarbeiter:")
     for idx, row in employees_df.iterrows():
-        print(f"{idx + 1}: {row['Vorname']} {row['Nachname']}")
+        log_and_print(f"{idx + 1}: {row['Vorname']} {row['Nachname']}")
     while True:
         try:
             choice = int(input("\nFür welchen Mitarbeiters soll die Tätigkeitsliste erstellt werden?  "))
@@ -20,6 +21,7 @@ def choose_employee(employees_df):
                 return (selected_employee['Vorname'], selected_employee['Nachname'], 
                         selected_employee['Mitarbeiternummer'], selected_employee['Resturlaub'])
             else:
-                print("Ungültige Auswahl. Bitte eine gültige Nummer eingeben.")
+                log_and_print("Ungültige Auswahl. Bitte eine gültige Nummer eingeben.")
         except ValueError:
-            print("Bitte eine gültige Nummer eingeben.")
+            log_and_print("Bitte eine gültige Nummer eingeben.")
+
