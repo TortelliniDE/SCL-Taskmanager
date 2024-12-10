@@ -55,39 +55,69 @@ def create_tasks(tasks, working_days):
         task_distribution[day] = random.sample(tasks, num_tasks)
     return task_distribution
 
-# Überschrift und Monatsliste ausdrucken
+# Monatsliste auf dem Bildschirm ausdrucken
 def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours):
+    mitarbeiternummer = "SCL-4711"
+    wochenarbeitszeit = 40
+    resturlaub = 7.5
+    stand_date = datetime.now().strftime("%d.%m.%Y")
+
     print(header)
+    print("\nMitarbeiternummer: " + mitarbeiternummer)
+    print("Wochenarbeitszeit: {} h/Wo".format(wochenarbeitszeit))
+    print("Resturlaub: {} Tage".format(resturlaub))
+    print("Stand: {}".format(stand_date))
+    print("\nDatum   Dauer    Wochentag    Tätigkeiten")
+    print("="*120)
+
     for day in month_days:
-        day_str = day.strftime("%d-%m-%Y")
+        day_str = day.strftime("%d.%m.")
+        weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
-            print(f"{day_str} Feiertag: {feiertage_bayern[day]}")
+            print(f"{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}")
         elif day in task_distribution:
             tasks = ", ".join(task_distribution[day])
-            print(f"{day_str} Arbeitsstunden: 8:00 Tasks: {tasks}")
+            print(f"{day_str}  8:00     {weekday_str:<10}  {tasks}")
         else:
-            print(f"{day_str} Wochenende")
-    print()
-    print(f"\nSollarbeitszeit: {soll_hours}h")
-    print(f"Ist-Arbeitszeit: {ist_hours}h\n")
+            print(f"{day_str}  0:00     {weekday_str:<10}  Wochenende")
+
+    print("\nSollarbeitszeit im Monat {}/{}: {:02d}:00 h".format(month_days[0].month, month_days[0].year, soll_hours))
+    print("Geleistete Arbeitszeit im Monat {}/{}: {:02d}:00 h".format(month_days[0].month, month_days[0].year, ist_hours))
+    print("\nDie Tätigkeitsliste {}/{} wurde erstellt.".format(month_days[0].month, month_days[0].year))
 
 # Monatsliste als Excel exportieren
 def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours, output_path):
     data = []
 
     for day in month_days:
-        day_str = day.strftime("%d-%m-%Y")
+        day_str = day.strftime("%d.%m.")
+        weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
-            data.append((day_str, "Feiertag", 0, 0, feiertage_bayern[day]))
+            data.append((day_str, "0:00", weekday_str, feiertage_bayern[day]))
         elif day in task_distribution:
             tasks = ", ".join(task_distribution[day])
-            data.append((day_str, "Arbeitstag", 8, 8, tasks))
+            data.append((day_str, "8:00", weekday_str, tasks))
         else:
-            data.append((day_str, "Wochenende", 0, 0, ""))
+            data.append((day_str, "0:00", weekday_str, "Wochenende"))
 
-    df = pd.DataFrame(data, columns=['Datum', 'Typ', 'Soll-Stunden', 'Ist-Stunden', 'Tasks'])
-    df.loc[len(df)] = ['Gesamt', '', soll_hours, ist_hours, '']
-    df.to_excel(output_path, index=False)
+    df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten'])
+    df.loc[len(df)] = ['Gesamt', '', '', '']
+    df.loc[len(df)] = ['Sollarbeitszeit', '{:02d}:00'.format(soll_hours), '', '']
+    df.loc[len(df)] = ['Ist-Arbeitszeit', '{:02d}:00'.format(ist_hours), '', '']
+
+    sheet_name = "Tätigkeitsliste"
+    writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
+
+    df.to_excel(writer, index=False, sheet_name=sheet_name)
+    
+    worksheet = writer.sheets[sheet_name]
+    worksheet.write_string('G1', header)
+    worksheet.write_string('G3', "Mitarbeiternummer: SCL-4711")
+    worksheet.write_string('G4', "Wochenarbeitszeit: 40 h/Wo")
+    worksheet.write_string('G5', "Resturlaub: 7.5 Tage")
+    worksheet.write_string('G6', "Stand: {}".format(datetime.now().strftime("%d.%m.%Y")))
+
+    writer.close()
 
 # Hauptprogramm
 def main():
