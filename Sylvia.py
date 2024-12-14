@@ -2,6 +2,7 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill
 
 # Funktionen
 
@@ -15,8 +16,7 @@ def import_tasks(file_path):
 def get_month():
     month = int(input("Bitte geben Sie den Monat (Zahl 1-12) ein: "))
     year = datetime.now().year
-    month_name = datetime.strptime(str(month), "%m").strftime("%B")
-    return f"Tätigkeitsliste {month_name}/{year}", month, year
+    return f"\nTätigkeitsliste {month:02d}/{year}", month, year
 
 # Berechnung der variablen Feiertage
 def get_variable_holidays(year):
@@ -103,7 +103,9 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_ho
     resturlaub = 7.5
     stand_date = datetime.now().strftime("%d.%m.%Y")
 
-    print(header)
+    # Fett gedruckter Header
+    print('\033[1m' + header + '\033[0m')
+    print('\033[1m' + '' + '\033[0m')  # Leere Zeile
     print("\nMitarbeiternummer: " + mitarbeiternummer)
     print("Wochenarbeitszeit: {} h/Wo".format(wochenarbeitszeit))
     print("Resturlaub: {} Tage".format(resturlaub))
@@ -115,7 +117,9 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_ho
         day_str = day.strftime("%d.%m.")
         weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
-            print(f"{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}")
+            print(f"\033[94m{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}\033[0m")
+        elif day.weekday() >= 5:
+            print(f"\033[94m{day_str}  0:00     {weekday_str:<10}  Wochenende\033[0m")
         elif day in task_distribution:
             tasks = ", ".join(task_distribution[day])
             print(f"{day_str}  8:00     {weekday_str:<10}  {tasks}")
@@ -139,33 +143,39 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
         day_str = day.strftime("%d.%m.")
         weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
-            data.append((day_str, "0:00", weekday_str, feiertage_bayern[day]))
-        elif day in task_distribution:
-            tasks = ", ".join(task_distribution[day])
-            data.append((day_str, "8:00", weekday_str, tasks))
+            data.append((day_str, "0:00", weekday_str, feiertage_bayern[day], "Feiertag"))
+        elif day.weekday() >= 5:
+            data.append((day_str, "0:00", weekday_str, "Wochenende", "Wochenende"))
         else:
-            data.append((day_str, "0:00", weekday_str, "Wochenende"))
+            tasks = ", ".join(task_distribution.get(day, []))
+            data.append((day_str, "8:00", weekday_str, tasks, "Arbeitstag"))
 
-    df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten'])
-    df.loc[len(df)] = ['', '', '', '']  # Leere Zeile
-    df.loc[len(df)] = ['Gesamt', '', '', '']
-    df.loc[len(df)] = ['Sollarbeitszeit', '{:02d}:00'.format(soll_hours), '', '']
-    df.loc[len(df)] = ['Ist-Arbeitszeit', '{:02d}:00'.format(ist_hours), '', '']
+    df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten', 'TagTyp'])
+    df.loc[len(df)] = ['', '', '', '', '']  # Leere Zeile
+    df.loc[len(df)] = ['Gesamt', '', '', '', '']
+    df.loc[len(df)] = ['Sollarbeitszeit', '{:02d}:00'.format(soll_hours), '', '', '']
+    df.loc[len(df)] = ['Ist-Arbeitszeit', '{:02d}:00'.format(ist_hours), '', '', '']
     
     difference = ist_hours - soll_hours
-    df.loc[len(df)] = ['Differenz', '{:02d}:00'.format(difference), '', '']
+    df.loc[len(df)] = ['Differenz', '{:02d}:00'.format(difference), '', '', '']
 
-    # Speichern Sie die Excel-Datei zunächst mit Pandas (keine Überschriften).
+    # Speichern der Excel-Datei mit Pandas (vorläufig)
     df.to_excel(output_path, index=False)
 
-    # Laden Sie die gespeicherte Excel-Datei erneut, um sie mit openpyxl zu bearbeiten.
+    # Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
     wb = load_workbook(output_path)
     ws = wb.active
 
-    # Fügt die Überschrift und zusätzlichen Informationen ein
-    ws.insert_rows(1, amount=7)
+    # Fett gedruckter Header
+    header_font = Font(bold=True)
+    # Blau gefärbte Zellen
+    blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+
+    # Einfügen der Überschrift und zusätzlichen Informationen
+    ws.insert_rows(1, amount=8)
     headers = [
         header,
+        "",  # Leere Zeile
         "Mitarbeiternummer: SCL-4711",
         "Wochenarbeitszeit: 40 h/Wo",
         "Resturlaub: 7.5 Tage",
@@ -173,9 +183,19 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
     ]
 
     for i, line in enumerate(headers, start=1):
-        ws.cell(row=i, column=1, value=line)
+        cell = ws.cell(row=i, column=1, value=line)
+        cell.font = header_font
 
-    # Speichern Sie die Änderungen in der Excel-Datei.
+    # Formatierung der Zeilen basierend auf dem TagTyp
+    for row in ws.iter_rows(min_row=9, min_col=1, max_col=5, max_row=ws.max_row):
+        if row[4].value in ["Feiertag", "Wochenende"]:
+            for cell in row:
+                cell.fill = blue_fill
+
+    # Entfernen der Hilfsspalte mit dem TagTyp
+    ws.delete_cols(5)
+
+    # Speichern Sie die Änderungen
     wb.save(output_path)
 
 # Hauptprogramm
