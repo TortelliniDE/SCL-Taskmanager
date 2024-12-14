@@ -108,7 +108,7 @@ def get_urlaubstage(month, year):
 def create_tasks(tasks, working_days):
     task_distribution = {}
     for day in working_days:
-        num_tasks = random.randint(3, 5)
+        num_tasks = random.randint(5, 7)
         task_distribution[day] = random.sample(tasks, num_tasks)
     return task_distribution
 
@@ -144,7 +144,7 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubs
         else:
             print(f"{day_str}  0:00     {weekday_str:<10}  Wochenende")
 
-    print("\nGesamt")
+    print("\nGesamt:")
     print("Sollarbeitszeit {:02d}:00 h".format(soll_hours))
     print("Ist-Arbeitszeit {:02d}:00 h".format(ist_hours))
 
