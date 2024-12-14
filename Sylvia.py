@@ -18,6 +18,37 @@ def get_month():
     month_name = datetime.strptime(str(month), "%m").strftime("%B")
     return f"Tätigkeitsliste {month_name}/{year}", month, year
 
+# Berechnung der variablen Feiertage
+def get_variable_holidays(year):
+    easter = calculate_easter(year)
+    holidays = {
+        'Ostersonntag': easter,
+        'Ostermontag': easter + timedelta(days=1),
+        'Christi Himmelfahrt': easter + timedelta(days=39),
+        'Pfingstmontag': easter + timedelta(days=50),
+        'Fronleichnam': easter + timedelta(days=60)
+    }
+    return holidays
+
+# Berechnung des Ostersonntags
+def calculate_easter(year):
+    # Computus algorithmus zur Berechnung von Ostern
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime(year, month, day)
+
 # Aktuelle Monatsübersicht inklusive der Feiertage in Bayern erstellen
 def create_month(month, year):
     start_date = datetime(year, month, 1)
@@ -27,15 +58,24 @@ def create_month(month, year):
         end_date = datetime(year, month + 1, 1)
     
     month_days = [start_date + timedelta(days=i) for i in range((end_date - start_date).days)]
+
+    variable_holidays = get_variable_holidays(year)
     
-    # Feiertage Bayern (Beispiel mit Namen)
+    # Feiertage Bayern
     feiertage_bayern = {
         datetime(year, 1, 1): "Neujahr",
+        datetime(year, 1, 6): "Heilige Drei Könige",
+        variable_holidays['Ostersonntag']: "Ostersonntag",
+        variable_holidays['Ostermontag']: "Ostermontag",
         datetime(year, 5, 1): "Tag der Arbeit",
+        variable_holidays['Christi Himmelfahrt']: "Christi Himmelfahrt",
+        variable_holidays['Pfingstmontag']: "Pfingstmontag",
+        variable_holidays['Fronleichnam']: "Fronleichnam",
+        datetime(year, 8, 15): "Mariä Himmelfahrt",
         datetime(year, 10, 3): "Tag der Deutschen Einheit",
+        datetime(year, 11, 1): "Allerheiligen",
         datetime(year, 12, 25): "1. Weihnachtsfeiertag",
         datetime(year, 12, 26): "2. Weihnachtsfeiertag"
-        # Weitere Feiertage hinzufügen
     }
     
     return month_days, feiertage_bayern
