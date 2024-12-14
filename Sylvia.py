@@ -2,7 +2,7 @@ import pandas as pd
 import random
 from datetime import datetime, timedelta
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 # Funktionen
 
@@ -108,7 +108,7 @@ def get_urlaubstage(month, year):
 def create_tasks(tasks, working_days):
     task_distribution = {}
     for day in working_days:
-        num_tasks = random.randint(5, 7)
+        num_tasks = random.randint(3, 5)
         task_distribution[day] = random.sample(tasks, num_tasks)
     return task_distribution
 
@@ -172,28 +172,29 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaub
 
     df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten', 'TagTyp'])
     df.loc[len(df)] = ['', '', '', '', '']  # Leere Zeile
-    df.loc[len(df)] = ['Gesamt', '', '', '', '']
-    df.loc[len(df)] = ['Sollarbeitszeit', '{:02d}:00'.format(soll_hours), '', '', '']
-    df.loc[len(df)] = ['Ist-Arbeitszeit', '{:02d}:00'.format(ist_hours), '', '', '']
+    df.loc[len(df)] = ['Gesamt:', '', '', '', '']
+    df.loc[len(df)] = ['Sollarbeitszeit:', '{:02d}:00'.format(soll_hours), '', '', '']
+    df.loc[len(df)] = ['Ist-Arbeitszeit:', '{:02d}:00'.format(ist_hours), '', '', '']
     
     difference = ist_hours - soll_hours
-    df.loc[len(df)] = ['Differenz', '{:02d}:00'.format(difference), '', '', '']
+    df.loc[len(df)] = ['Differenz:', '{:02d}:00'.format(difference), '', '', '']
 
-    ## Speichern der Excel-Datei mit Pandas (vorläufig)
+    # Speichern der Excel-Datei mit Pandas (vorläufig)
     df.to_excel(output_path, index=False)
 
-    ## Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
+    # Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
     wb = load_workbook(output_path)
     ws = wb.active
 
-    ## Fett gedruckter Header
-    header_font = Font(bold=True)
-    ## Blau gefärbte Zellen für Wochenende
+    # Formatierungen
+    header_font = Font(bold=True, size=14)
+    info_font = Font(size=11)
     blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    ## Rot gefärbte Zellen für Feiertage und Urlaubstage
     red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-
-    ## Einfügen der Überschrift und zusätzlichen Informationen
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    right_alignment = Alignment(horizontal="right")
+                            
+    # Einfügen der Überschrift und zusätzlichen Informationen
     ws.insert_rows(1, amount=8)
     headers = [
         header,
@@ -204,11 +205,16 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaub
         "Stand: {}".format(datetime.now().strftime("%d.%m.%Y"))
     ]
 
-    for i, line in enumerate(headers, start=1):
-        cell = ws.cell(row=i, column=1, value=line)
-        cell.font = header_font
+    # Überschrift fett und Schriftgröße 14
+    cell = ws.cell(row=1, column=1, value=headers[0])
+    cell.font = header_font
 
-    ## Formatierung der Zeilen basierend auf dem TagTyp
+    # Restliche Informationen Schriftgröße 11
+    for i, line in enumerate(headers[1:], start=2):
+        cell = ws.cell(row=i, column=1, value=line)
+        cell.font = info_font
+
+    # Formatierung der Zeilen basierend auf dem TagTyp
     for row in ws.iter_rows(min_row=9, min_col=1, max_col=5, max_row=ws.max_row):
         if row[4].value in ["Feiertag", "Urlaub"]:
             for cell in row:
@@ -217,10 +223,16 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaub
             for cell in row:
                 cell.fill = blue_fill
 
-    ## Entfernen der Hilfsspalte mit dem TagTyp
+        # Rahmen erstellen und Ausrichtung für Datum und Dauer setzen
+        for cell in row:
+            cell.border = thin_border
+        row[0].alignment = right_alignment  # Datum
+        row[1].alignment = right_alignment  # Dauer
+
+    # Entfernen der Hilfsspalte mit dem TagTyp
     ws.delete_cols(5)
 
-    ## Speichern Sie die Änderungen
+    # Speichern Sie die Änderungen
     wb.save(output_path)
 
 # Hauptprogramm
