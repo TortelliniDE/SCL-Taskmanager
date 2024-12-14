@@ -16,7 +16,7 @@ def import_tasks(file_path):
 def get_month():
     month = int(input("Bitte geben Sie den Monat (Zahl 1-12) ein: "))
     year = datetime.now().year
-    return f"\nTätigkeitsliste {month:02d}/{year}", month, year
+    return f"Tätigkeitsliste {month:02d}/{year}", month, year
 
 # Berechnung der variablen Feiertage
 def get_variable_holidays(year):
@@ -81,12 +81,28 @@ def create_month(month, year):
     return month_days, feiertage_bayern
 
 # Soll-Arbeitsstunden und tatsächlich geleistete Stunden eintragen
-def working_hours(month_days, feiertage_bayern):
-    working_days = [day for day in month_days if day.weekday() < 5 and day not in feiertage_bayern]
+def working_hours(month_days, feiertage_bayern, urlaubstage):
+    working_days = [day for day in month_days if day.weekday() < 5 and day not in feiertage_bayern and day not in urlaubstage]
     
     soll_hours = 8 * len(working_days)
     ist_hours = 8 * len(working_days)
     return soll_hours, ist_hours, working_days
+
+# Urlaubstage einlesen
+def get_urlaubstage(month, year):
+    urlaub = input("Hattest du in dem Monat Urlaub? (j/n): ").strip().lower()
+    urlaubstage = []
+    if urlaub == 'j':
+        tage = input("Bitte geben Sie die Urlaubstage (z.B. 9, 12, 15-17) ein: ")
+        tage_list = tage.split(',')
+        for tag in tage_list:
+            if '-' in tag:
+                start, end = tag.split('-')
+                start, end = int(start.strip()), int(end.strip())
+                urlaubstage.extend([datetime(year, month, day) for day in range(start, end + 1)])
+            else:
+                urlaubstage.append(datetime(year, month, int(tag.strip())))
+    return urlaubstage
 
 # Aufgaben zufällig auf alle Arbeitstage verteilen
 def create_tasks(tasks, working_days):
@@ -97,7 +113,7 @@ def create_tasks(tasks, working_days):
     return task_distribution
 
 # Monatsliste auf dem Bildschirm ausdrucken
-def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours):
+def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours):
     mitarbeiternummer = "SCL-4711"
     wochenarbeitszeit = 40
     resturlaub = 7.5
@@ -117,7 +133,9 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_ho
         day_str = day.strftime("%d.%m.")
         weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
-            print(f"\033[94m{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}\033[0m")
+            print(f"\033[91m{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}\033[0m")
+        elif day in urlaubstage:
+            print(f"\033[91m{day_str}  0:00     {weekday_str:<10}  Urlaub\033[0m")
         elif day.weekday() >= 5:
             print(f"\033[94m{day_str}  0:00     {weekday_str:<10}  Wochenende\033[0m")
         elif day in task_distribution:
@@ -136,7 +154,7 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_ho
     print("\nDie Tätigkeitsliste {}/{} wurde erstellt.".format(month_days[0].month, month_days[0].year))
 
 # Monatsliste als Excel exportieren
-def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours, output_path):
+def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours, output_path):
     data = []
 
     for day in month_days:
@@ -144,6 +162,8 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
         weekday_str = day.strftime("%A")
         if day in feiertage_bayern:
             data.append((day_str, "0:00", weekday_str, feiertage_bayern[day], "Feiertag"))
+        elif day in urlaubstage:
+            data.append((day_str, "0:00", weekday_str, "Urlaub", "Urlaub"))
         elif day.weekday() >= 5:
             data.append((day_str, "0:00", weekday_str, "Wochenende", "Wochenende"))
         else:
@@ -159,19 +179,21 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
     difference = ist_hours - soll_hours
     df.loc[len(df)] = ['Differenz', '{:02d}:00'.format(difference), '', '', '']
 
-    # Speichern der Excel-Datei mit Pandas (vorläufig)
+    ## Speichern der Excel-Datei mit Pandas (vorläufig)
     df.to_excel(output_path, index=False)
 
-    # Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
+    ## Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
     wb = load_workbook(output_path)
     ws = wb.active
 
-    # Fett gedruckter Header
+    ## Fett gedruckter Header
     header_font = Font(bold=True)
-    # Blau gefärbte Zellen
+    ## Blau gefärbte Zellen für Wochenende
     blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    ## Rot gefärbte Zellen für Feiertage und Urlaubstage
+    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
-    # Einfügen der Überschrift und zusätzlichen Informationen
+    ## Einfügen der Überschrift und zusätzlichen Informationen
     ws.insert_rows(1, amount=8)
     headers = [
         header,
@@ -186,16 +208,19 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
         cell = ws.cell(row=i, column=1, value=line)
         cell.font = header_font
 
-    # Formatierung der Zeilen basierend auf dem TagTyp
+    ## Formatierung der Zeilen basierend auf dem TagTyp
     for row in ws.iter_rows(min_row=9, min_col=1, max_col=5, max_row=ws.max_row):
-        if row[4].value in ["Feiertag", "Wochenende"]:
+        if row[4].value in ["Feiertag", "Urlaub"]:
+            for cell in row:
+                cell.fill = red_fill
+        elif row[4].value == "Wochenende":
             for cell in row:
                 cell.fill = blue_fill
 
-    # Entfernen der Hilfsspalte mit dem TagTyp
+    ## Entfernen der Hilfsspalte mit dem TagTyp
     ws.delete_cols(5)
 
-    # Speichern Sie die Änderungen
+    ## Speichern Sie die Änderungen
     wb.save(output_path)
 
 # Hauptprogramm
@@ -205,12 +230,13 @@ def main():
 
     tasks = import_tasks(file_path)
     header, month, year = get_month()
+    urlaubstage = get_urlaubstage(month, year)
     month_days, feiertage_bayern = create_month(month, year)
-    soll_hours, ist_hours, working_days = working_hours(month_days, feiertage_bayern)
+    soll_hours, ist_hours, working_days = working_hours(month_days, feiertage_bayern, urlaubstage)
     task_distribution = create_tasks(tasks, working_days)
 
-    print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours)
-    export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_hours, ist_hours, output_path)
+    print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours)
+    export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours, output_path)
 
 if __name__ == '__main__':
     main()
