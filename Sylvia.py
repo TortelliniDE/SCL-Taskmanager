@@ -1,6 +1,7 @@
 import pandas as pd
 import random
 from datetime import datetime, timedelta
+from openpyxl import load_workbook
 
 # Funktionen
 
@@ -81,8 +82,13 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, soll_ho
         else:
             print(f"{day_str}  0:00     {weekday_str:<10}  Wochenende")
 
-    print("\nSollarbeitszeit im Monat {}/{}: {:02d}:00 h".format(month_days[0].month, month_days[0].year, soll_hours))
-    print("Geleistete Arbeitszeit im Monat {}/{}: {:02d}:00 h".format(month_days[0].month, month_days[0].year, ist_hours))
+    print("\nGesamt")
+    print("Sollarbeitszeit {:02d}:00 h".format(soll_hours))
+    print("Ist-Arbeitszeit {:02d}:00 h".format(ist_hours))
+
+    difference = ist_hours - soll_hours
+    print("Differenz {:02d}:00 h".format(difference))
+
     print("\nDie Tätigkeitsliste {}/{} wurde erstellt.".format(month_days[0].month, month_days[0].year))
 
 # Monatsliste als Excel exportieren
@@ -101,23 +107,36 @@ def export_tasks(header, month_days, task_distribution, feiertage_bayern, soll_h
             data.append((day_str, "0:00", weekday_str, "Wochenende"))
 
     df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten'])
+    df.loc[len(df)] = ['', '', '', '']  # Leere Zeile
     df.loc[len(df)] = ['Gesamt', '', '', '']
     df.loc[len(df)] = ['Sollarbeitszeit', '{:02d}:00'.format(soll_hours), '', '']
     df.loc[len(df)] = ['Ist-Arbeitszeit', '{:02d}:00'.format(ist_hours), '', '']
-
-    sheet_name = "Tätigkeitsliste"
-    writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
-
-    df.to_excel(writer, index=False, sheet_name=sheet_name)
     
-    worksheet = writer.sheets[sheet_name]
-    worksheet.write_string('G1', header)
-    worksheet.write_string('G3', "Mitarbeiternummer: SCL-4711")
-    worksheet.write_string('G4', "Wochenarbeitszeit: 40 h/Wo")
-    worksheet.write_string('G5', "Resturlaub: 7.5 Tage")
-    worksheet.write_string('G6', "Stand: {}".format(datetime.now().strftime("%d.%m.%Y")))
+    difference = ist_hours - soll_hours
+    df.loc[len(df)] = ['Differenz', '{:02d}:00'.format(difference), '', '']
 
-    writer.close()
+    # Speichern Sie die Excel-Datei zunächst mit Pandas (keine Überschriften).
+    df.to_excel(output_path, index=False)
+
+    # Laden Sie die gespeicherte Excel-Datei erneut, um sie mit openpyxl zu bearbeiten.
+    wb = load_workbook(output_path)
+    ws = wb.active
+
+    # Fügt die Überschrift und zusätzlichen Informationen ein
+    ws.insert_rows(1, amount=7)
+    headers = [
+        header,
+        "Mitarbeiternummer: SCL-4711",
+        "Wochenarbeitszeit: 40 h/Wo",
+        "Resturlaub: 7.5 Tage",
+        "Stand: {}".format(datetime.now().strftime("%d.%m.%Y"))
+    ]
+
+    for i, line in enumerate(headers, start=1):
+        ws.cell(row=i, column=1, value=line)
+
+    # Speichern Sie die Änderungen in der Excel-Datei.
+    wb.save(output_path)
 
 # Hauptprogramm
 def main():
