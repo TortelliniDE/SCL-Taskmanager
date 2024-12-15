@@ -108,7 +108,7 @@ def get_urlaubstage(month, year):
 def create_tasks(tasks, working_days):
     task_distribution = {}
     for day in working_days:
-        num_tasks = random.randint(3, 5)
+        num_tasks = random.randint(6, 7)
         task_distribution[day] = random.sample(tasks, num_tasks)
     return task_distribution
 
