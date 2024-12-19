@@ -16,7 +16,7 @@ def import_tasks(file_path):
 def get_month():
     month = int(input("Bitte geben Sie den Monat (Zahl 1-12) ein: "))
     year = datetime.now().year
-    return f"Tätigkeitsliste {month:02d}/{year}", month, year
+    return f"Tätigkeitsliste für den Monat {month:02d}/{year}", month, year
 
 # Berechnung der variablen Feiertage
 def get_variable_holidays(year):
@@ -91,6 +91,7 @@ def working_hours(month_days, feiertage_bayern, urlaubstage):
 # Urlaubstage einlesen
 def get_urlaubstage(month, year):
     urlaub = input("Hattest du in dem Monat Urlaub? (j/n): ").strip().lower()
+    print()
     urlaubstage = []
     if urlaub == 'j':
         tage = input("Bitte geben Sie die Urlaubstage (z.B. 9, 12, 15-17) ein: ")
@@ -114,7 +115,9 @@ def create_tasks(tasks, working_days):
 
 # Monatsliste auf dem Bildschirm ausdrucken
 def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours):
-    mitarbeiternummer = "SCL-4711"
+    lastname = "Prigge"
+    firstname = "Sylvia"
+    mitarbeiternummer = "XXXXXXX"
     wochenarbeitszeit = 40
     resturlaub = 7.5
     stand_date = datetime.now().strftime("%d.%m.%Y")
@@ -122,7 +125,9 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubs
     # Fett gedruckter Header
     print('\033[1m' + header + '\033[0m')
     print('\033[1m' + '' + '\033[0m')  # Leere Zeile
-    print("\nMitarbeiternummer: " + mitarbeiternummer)
+    print("Nachname: " + lastname)
+    print("Vorname: " + firstname)
+    print("Mitarbeiternummer: " + mitarbeiternummer)
     print("Wochenarbeitszeit: {} h/Wo".format(wochenarbeitszeit))
     print("Resturlaub: {} Tage".format(resturlaub))
     print("Stand: {}".format(stand_date))
@@ -151,7 +156,7 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubs
     difference = ist_hours - soll_hours
     print("Differenz {:02d}:00 h".format(difference))
 
-    print("\nDie Tätigkeitsliste {}/{} wurde erstellt.".format(month_days[0].month, month_days[0].year))
+    print("\nDie Tätigkeitsliste {}/{} wurde erstellt und als excel file output.xml gespeichert.".format(month_days[0].month, month_days[0].year))
 
 # Monatsliste als Excel exportieren
 def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours, output_path):
