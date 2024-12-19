@@ -113,6 +113,10 @@ def create_tasks(tasks, working_days):
         task_distribution[day] = random.sample(tasks, num_tasks)
     return task_distribution
 
+# Funktion zur Umwandlung des Wochentags in das Format Mo, Di, Mi etc.
+def get_short_weekday(weekday):
+    return ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][weekday]
+
 # Monatsliste auf dem Bildschirm ausdrucken
 def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours):
     lastname = "Prigge"
@@ -136,18 +140,18 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubs
 
     for day in month_days:
         day_str = day.strftime("%d.%m.")
-        weekday_str = day.strftime("%A")
+        weekday_str = get_short_weekday(day.weekday())
         if day in feiertage_bayern:
-            print(f"\033[91m{day_str}  0:00     {weekday_str:<10}  {feiertage_bayern[day]}\033[0m")
+            print(f"\033[91m{day_str}  0:00     {weekday_str:<2}  {feiertage_bayern[day]}\033[0m")
         elif day in urlaubstage:
-            print(f"\033[91m{day_str}  0:00     {weekday_str:<10}  Urlaub\033[0m")
+            print(f"\033[91m{day_str}  0:00     {weekday_str:<2}  Urlaub\033[0m")
         elif day.weekday() >= 5:
-            print(f"\033[94m{day_str}  0:00     {weekday_str:<10}  Wochenende\033[0m")
+            print(f"\033[94m{day_str}  0:00     {weekday_str:<2}  Wochenende\033[0m")
         elif day in task_distribution:
             tasks = ", ".join(task_distribution[day])
-            print(f"{day_str}  8:00     {weekday_str:<10}  {tasks}")
+            print(f"{day_str}  8:00     {weekday_str:<2}  {tasks}")
         else:
-            print(f"{day_str}  0:00     {weekday_str:<10}  Wochenende")
+            print(f"{day_str}  0:00     {weekday_str:<2}  Wochenende")
 
     print("\nGesamt:")
     print("Sollarbeitszeit {:02d}:00 h".format(soll_hours))
@@ -157,6 +161,89 @@ def print_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubs
     print("Differenz {:02d}:00 h".format(difference))
 
     print("\nDie Tätigkeitsliste {}/{} wurde erstellt und als excel file output.xml gespeichert.".format(month_days[0].month, month_days[0].year))
+
+# Monatsliste als Excel exportieren
+def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours, output_path):
+    data = []
+
+    for day in month_days:
+        day_str = day.strftime("%d.%m.")
+        weekday_str = get_short_weekday(day.weekday())
+        if day in feiertage_bayern:
+            data.append((day_str, "0:00", weekday_str, feiertage_bayern[day], "Feiertag"))
+        elif day in urlaubstage:
+            data.append((day_str, "0:00", weekday_str, "Urlaub", "Urlaub"))
+        elif day.weekday() >= 5:
+            data.append((day_str, "0:00", weekday_str, "Wochenende", "Wochenende"))
+        else:
+            tasks = ", ".join(task_distribution.get(day, []))
+            data.append((day_str, "8:00", weekday_str, tasks, "Arbeitstag"))
+
+    df = pd.DataFrame(data, columns=['Datum', 'Dauer', 'Wochentag', 'Tätigkeiten', 'TagTyp'])
+    df.loc[len(df)] = ['', '', '', '', '']  # Leere Zeile
+    df.loc[len(df)] = ['Gesamt:', '', '', '', '']
+    df.loc[len(df)] = ['Sollarbeitszeit:', '{:02d}:00'.format(soll_hours), '', '', '']
+    df.loc[len(df)] = ['Ist-Arbeitszeit:', '{:02d}:00'.format(ist_hours), '', '', '']
+    
+    difference = ist_hours - soll_hours
+    df.loc[len(df)] = ['Differenz:', '{:02d}:00'.format(difference), '', '', '']
+
+    # Speichern der Excel-Datei mit Pandas (vorläufig)
+    df.to_excel(output_path, index=False)
+
+    # Laden der gespeicherten Datei mit openpyxl zur Bearbeitung
+    wb = load_workbook(output_path)
+    ws = wb.active
+
+    # Formatierungen
+    header_font = Font(bold=True, size=14)
+    info_font = Font(size=11)
+    blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    right_alignment = Alignment(horizontal="right")
+                            
+    # Einfügen der Überschrift und zusätzlichen Informationen
+    ws.insert_rows(1, amount=8)
+    headers = [
+        header,
+        "",  # Leere Zeile
+        "Mitarbeiternummer: SCL-4711",
+        "Wochenarbeitszeit: 40 h/Wo",
+        "Resturlaub: 7.5 Tage",
+        "Stand: {}".format(datetime.now().strftime("%d.%m.%Y"))
+    ]
+
+    # Überschrift fett und Schriftgröße 14
+    cell = ws.cell(row=1, column=1, value=headers[0])
+    cell.font = header_font
+
+    # Restliche Informationen Schriftgröße 11
+    for i, line in enumerate(headers[1:], start=2):
+        cell = ws.cell(row=i, column=1, value=line)
+        cell.font = info_font
+
+    # Formatierung der Zeilen basierend auf dem TagTyp
+    for row in ws.iter_rows(min_row=9, min_col=1, max_col=5, max_row=ws.max_row):
+        if row[4].value in ["Feiertag", "Urlaub"]:
+            for cell in row:
+                cell.fill = red_fill
+        elif row[4].value == "Wochenende":
+            for cell in row:
+                cell.fill = blue_fill
+
+        # Rahmen erstellen und Ausrichtung für Datum und Dauer setzen
+        for cell in row:
+            cell.border = thin_border
+        row[0].alignment = right_alignment  # Datum
+        row[1].alignment = right_alignment  # Dauer
+
+    # Entfernen der Hilfsspalte mit dem TagTyp
+    ws.delete_cols(5)
+
+    # Speichern Sie die Änderungen
+    wb.save(output_path)
+
 
 # Monatsliste als Excel exportieren
 def export_tasks(header, month_days, task_distribution, feiertage_bayern, urlaubstage, soll_hours, ist_hours, output_path):
