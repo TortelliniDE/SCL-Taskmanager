@@ -9,7 +9,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 # Importieren aller Aufgaben aus einem Excel-File
 def import_tasks(file_path):
     tasks_df = pd.read_excel(file_path)
-    return tasks_df['Task'].tolist()
+    return tasks_df['Projektnummer'].tolist()
 
 # Aktuellen Monat einlesen und Überschriften erstellen
 # Titel "Tätigkeitsliste <eingegebener Monat>/<aktuelles Jahr>"
